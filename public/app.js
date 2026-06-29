@@ -57,7 +57,6 @@ const toast = document.getElementById('notification-toast');
 const toastIcon = document.getElementById('toast-icon');
 const toastMessage = document.getElementById('toast-message');
 
-const footerPort = document.getElementById('footer-port');
 const footerInterval = document.getElementById('footer-interval');
 
 // Status mappings
@@ -172,7 +171,6 @@ async function fetchStatus(isManual = false) {
     
     // Config Updates
     config = data.config;
-    footerPort.textContent = config.customPort;
     footerInterval.textContent = `${config.pollIntervalMs / 1000}s`;
     
     // Webhook UI
