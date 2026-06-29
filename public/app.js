@@ -25,8 +25,12 @@ const countdownFill = document.getElementById('countdown-fill');
 const btnRefresh = document.getElementById('btn-refresh');
 const refreshIcon = document.getElementById('refresh-icon');
 const btnTestWebhook = document.getElementById('btn-test-webhook');
+const webhookPassword = document.getElementById('webhook-password');
 const webhookUrlDesc = document.getElementById('webhook-url-desc');
 const webhookBadgeStatus = document.getElementById('webhook-badge-status');
+
+const inputUserId = document.getElementById('input-userid');
+const btnTrackUser = document.getElementById('btn-track-user');
 
 const logList = document.getElementById('log-list');
 const logEmptyState = document.getElementById('log-empty-state');
@@ -259,15 +263,29 @@ btnRefresh.addEventListener('click', async () => {
 });
 
 btnTestWebhook.addEventListener('click', async () => {
+  const password = webhookPassword.value.trim();
+  if (!password) {
+    showNotification('Please enter the webhook test password.', 'error');
+    webhookPassword.focus();
+    return;
+  }
+
   btnTestWebhook.disabled = true;
   btnTestWebhook.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Sending...';
 
   try {
-    const res = await fetch('/api/test-webhook', { method: 'POST' });
+    const res = await fetch('/api/test-webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
+    });
     const data = await res.json();
     
     if (res.ok) {
       showNotification('Discord Webhook test message sent!', 'success');
+      webhookPassword.value = '';
     } else {
       showNotification(`Test failed: ${data.error || res.statusText}`, 'error');
     }
@@ -276,6 +294,45 @@ btnTestWebhook.addEventListener('click', async () => {
   } finally {
     btnTestWebhook.disabled = false;
     btnTestWebhook.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Test Discord Webhook';
+  }
+});
+
+btnTrackUser.addEventListener('click', async () => {
+  const userId = inputUserId.value.trim();
+  if (!userId || isNaN(parseInt(userId, 10))) {
+    showNotification('Please enter a valid numeric Roblox User ID.', 'error');
+    inputUserId.focus();
+    return;
+  }
+
+  btnTrackUser.disabled = true;
+  btnTrackUser.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Updating...';
+
+  try {
+    const res = await fetch('/api/track-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      showNotification(`Now tracking ${data.userProfile.displayName}!`, 'success');
+      inputUserId.value = '';
+      
+      // Update local client status and reset visual progress
+      await fetchStatus();
+      countdownRemaining = config.pollIntervalMs / 1000;
+    } else {
+      showNotification(`Update failed: ${data.error || res.statusText}`, 'error');
+    }
+  } catch (err) {
+    showNotification('Failed to switch tracked user', 'error');
+  } finally {
+    btnTrackUser.disabled = false;
+    btnTrackUser.innerHTML = '<i class="fa-solid fa-user-plus"></i> Switch Target User';
   }
 });
 

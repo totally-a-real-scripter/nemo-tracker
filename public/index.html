@@ -98,6 +98,11 @@
             </div>
           </div>
 
+          <div class="control-input-group" style="margin-bottom: 16px;">
+            <i class="fa-solid fa-lock input-icon"></i>
+            <input type="password" id="webhook-password" class="text-input" placeholder="Webhook Test Password (default: nemo123)">
+          </div>
+
           <div class="control-buttons">
             <button class="btn btn-secondary" id="btn-refresh" title="Manually query Roblox API immediately">
               <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Query Now
@@ -117,6 +122,18 @@
             </div>
             <span class="webhook-badge active" id="webhook-badge-status">Active</span>
           </div>
+        </section>
+
+        <!-- Target Switcher Card -->
+        <section class="card config-card">
+          <h2 class="card-title"><i class="fa-solid fa-user-gear icon-margin"></i> Track Another User</h2>
+          <div class="control-input-group">
+            <i class="fa-solid fa-fingerprint input-icon"></i>
+            <input type="text" id="input-userid" class="text-input" placeholder="Enter Roblox User ID (e.g. 162336333)">
+          </div>
+          <button class="btn btn-primary" id="btn-track-user" style="margin-top: 16px;">
+            <i class="fa-solid fa-user-plus"></i> Switch Target User
+          </button>
         </section>
 
         <!-- Log Card -->

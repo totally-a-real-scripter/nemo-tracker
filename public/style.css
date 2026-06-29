@@ -803,3 +803,48 @@ body {
     align-self: flex-end;
   }
 }
+
+/* ==========================================================================
+   Input Field Custom Styles
+   ========================================================================== */
+.control-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+  pointer-events: none;
+  transition: var(--transition-smooth);
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  font-weight: 500;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.text-input:focus {
+  border-color: var(--color-primary);
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+.text-input:focus ~ .input-icon,
+.text-input:focus + .input-icon {
+  color: var(--color-primary);
+}
+

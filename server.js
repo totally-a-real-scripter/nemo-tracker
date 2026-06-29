@@ -7,9 +7,11 @@ const __dirname = path.dirname(__filename);
 
 // Configurations
 const PORT = process.env.PORT || 8383;
-const ROBLOX_USER_ID = process.env.ROBLOX_USER_ID || '162336333';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1521254361433505922/50CJR3_yifDYyD4H9UuPjIxbZHWpYo2lqk71cZjZN8eIpV5rfRFhByzItiP1wtgmJ1UT';
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '15000', 10);
+const WEBHOOK_TEST_PASSWORD = process.env.WEBHOOK_TEST_PASSWORD || 'nemo123';
+
+let robloxUserId = process.env.ROBLOX_USER_ID || '162336333';
 
 const app = express();
 app.use(express.json());
@@ -17,7 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory application state
 let userProfile = {
-  id: ROBLOX_USER_ID,
+  id: robloxUserId,
   username: 'Unknown',
   displayName: 'Loading User...',
   avatarUrl: 'https://images.rbxcdn.com/3d559e2b17a149b5dfd4f8f4117b3a72.png'
@@ -64,8 +66,8 @@ function getPresenceInfo(presenceType) {
 // Fetch User details and headshot avatar at startup
 async function fetchUserProfile() {
   try {
-    console.log(`[Init] Fetching profile for Roblox ID ${ROBLOX_USER_ID}...`);
-    const profileRes = await fetch(`https://users.roblox.com/v1/users/${ROBLOX_USER_ID}`);
+    console.log(`[Init] Fetching profile for Roblox ID ${robloxUserId}...`);
+    const profileRes = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
     if (profileRes.ok) {
       const data = await profileRes.json();
       userProfile.username = data.name;
@@ -80,7 +82,7 @@ async function fetchUserProfile() {
 
   try {
     console.log(`[Init] Fetching avatar headshot...`);
-    const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ROBLOX_USER_ID}&size=150x150&format=Png&isCircular=false`);
+    const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
     if (thumbRes.ok) {
       const data = await thumbRes.json();
       if (data.data && data.data[0]) {
@@ -106,7 +108,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
   const embed = {
     title: 'Roblox Status Change Notification',
     description: `**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.`,
-    url: `https://www.roblox.com/users/${ROBLOX_USER_ID}/profile`,
+    url: `https://www.roblox.com/users/${robloxUserId}/profile`,
     color: newInfo.color,
     fields: [
       {
@@ -163,7 +165,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
 async function pollRobloxPresence() {
   try {
     const url = 'https://presence.roblox.com/v1/presence/users';
-    const body = JSON.stringify({ userIds: [parseInt(ROBLOX_USER_ID, 10)] });
+    const body = JSON.stringify({ userIds: [parseInt(robloxUserId, 10)] });
 
     const response = await fetch(url, {
       method: 'POST',
@@ -260,7 +262,7 @@ app.get('/api/status', (req, res) => {
     config: {
       pollIntervalMs: POLL_INTERVAL_MS,
       customPort: PORT,
-      robloxUserId: ROBLOX_USER_ID,
+      robloxUserId: robloxUserId,
       discordWebhookUrlSet: !!DISCORD_WEBHOOK_URL
     }
   });
@@ -272,8 +274,57 @@ app.post('/api/refresh', async (req, res) => {
   res.json({ success: true, currentPresence });
 });
 
+app.post('/api/track-user', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId || isNaN(parseInt(userId, 10))) {
+    return res.status(400).json({ error: 'Invalid User ID. Please supply a numeric Roblox User ID.' });
+  }
+
+  const targetId = parseInt(userId, 10).toString();
+  console.log(`[API] Switching tracking target to Roblox ID: ${targetId}`);
+  robloxUserId = targetId;
+
+  // Reset local state for the new user
+  userProfile = {
+    id: robloxUserId,
+    username: 'Unknown',
+    displayName: 'Loading User...',
+    avatarUrl: 'https://images.rbxcdn.com/3d559e2b17a149b5dfd4f8f4117b3a72.png'
+  };
+
+  currentPresence = {
+    userPresenceType: null,
+    lastLocation: 'Unknown',
+    placeId: null,
+    rootPlaceId: null,
+    gameId: null,
+    universeId: null,
+    lastUpdated: null
+  };
+
+  // Clear logs array
+  logs.length = 0;
+  addLog('init', `Tracking target updated to Roblox ID ${robloxUserId}`, 'Initializing info...');
+
+  try {
+    // Fetch details & presence for the new user
+    await fetchUserProfile();
+    await pollRobloxPresence();
+    res.json({ success: true, userProfile, currentPresence });
+  } catch (err) {
+    res.status(500).json({ error: `Failed to load info for new user: ${err.message}` });
+  }
+});
+
 app.post('/api/test-webhook', async (req, res) => {
   console.log('[API] Webhook test requested');
+  const { password } = req.body;
+
+  if (password !== WEBHOOK_TEST_PASSWORD) {
+    console.log('[API] Webhook test denied: invalid password');
+    return res.status(403).json({ error: 'Forbidden: Incorrect Webhook Test Password' });
+  }
+
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL === 'placeholder') {
     return res.status(400).json({ error: 'Webhook URL not set' });
   }
@@ -281,7 +332,7 @@ app.post('/api/test-webhook', async (req, res) => {
   const testEmbed = {
     title: '🚀 Nemo Tracker - Webhook Test',
     description: 'This is a test notification confirming that the status change webhook integration is active and working correctly!',
-    url: `https://www.roblox.com/users/${ROBLOX_USER_ID}/profile`,
+    url: `https://www.roblox.com/users/${robloxUserId}/profile`,
     color: 0x3498db, // In-game blue
     fields: [
       {
@@ -348,7 +399,7 @@ async function startApp() {
     console.log(`Nemo Tracker is running!`);
     console.log(`Server Port: ${PORT}`);
     console.log(`Local Access: http://localhost:${PORT}`);
-    console.log(`Roblox Target ID: ${ROBLOX_USER_ID}`);
+    console.log(`Roblox Target ID: ${robloxUserId}`);
     console.log(`Polling Frequency: Every ${POLL_INTERVAL_MS / 1000}s`);
     console.log(`========================================`);
   });
