@@ -24,13 +24,29 @@ const countdownText = document.getElementById('countdown-text');
 const countdownFill = document.getElementById('countdown-fill');
 const btnRefresh = document.getElementById('btn-refresh');
 const refreshIcon = document.getElementById('refresh-icon');
-const btnTestWebhook = document.getElementById('btn-test-webhook');
+
+// Modal Elements
+const modalOverlay = document.getElementById('modal-overlay');
+const webhookModal = document.getElementById('webhook-modal');
+const userModal = document.getElementById('user-modal');
+
+const btnOpenWebhookModal = document.getElementById('btn-open-webhook-modal');
+const btnOpenUserModal = document.getElementById('btn-open-user-modal');
+
+const btnCloseWebhookModal = document.getElementById('btn-close-webhook-modal');
+const btnCloseUserModal = document.getElementById('btn-close-user-modal');
+
+const btnCancelWebhook = document.getElementById('btn-cancel-webhook');
+const btnCancelUser = document.getElementById('btn-cancel-user');
+
+const btnSubmitWebhook = document.getElementById('btn-submit-webhook');
+const btnSubmitUser = document.getElementById('btn-submit-user');
+
 const webhookPassword = document.getElementById('webhook-password');
+const inputUserId = document.getElementById('input-userid');
+
 const webhookUrlDesc = document.getElementById('webhook-url-desc');
 const webhookBadgeStatus = document.getElementById('webhook-badge-status');
-
-const inputUserId = document.getElementById('input-userid');
-const btnTrackUser = document.getElementById('btn-track-user');
 
 const logList = document.getElementById('log-list');
 const logEmptyState = document.getElementById('log-empty-state');
@@ -239,7 +255,52 @@ function startCountdown() {
   }, 1000);
 }
 
-// UI Event Handlers
+// Modal Toggle Handlers
+function showWebhookModal() {
+  modalOverlay.classList.add('active');
+  webhookModal.classList.add('active');
+  webhookPassword.focus();
+}
+
+function showUserModal() {
+  modalOverlay.classList.add('active');
+  userModal.classList.add('active');
+  inputUserId.focus();
+}
+
+function closeAllModals() {
+  modalOverlay.classList.remove('active');
+  webhookModal.classList.remove('active');
+  userModal.classList.remove('active');
+  webhookPassword.value = '';
+  inputUserId.value = '';
+}
+
+// UI Event Handlers for Modals
+btnOpenWebhookModal.addEventListener('click', showWebhookModal);
+btnOpenUserModal.addEventListener('click', showUserModal);
+
+btnCloseWebhookModal.addEventListener('click', closeAllModals);
+btnCloseUserModal.addEventListener('click', closeAllModals);
+
+btnCancelWebhook.addEventListener('click', closeAllModals);
+btnCancelUser.addEventListener('click', closeAllModals);
+
+// Close on backdrop overlay click
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) {
+    closeAllModals();
+  }
+});
+
+// Close modals on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+    closeAllModals();
+  }
+});
+
+// Manual Roblox API Refresh
 btnRefresh.addEventListener('click', async () => {
   // Trigger spin animation
   refreshIcon.classList.add('spin');
@@ -262,7 +323,8 @@ btnRefresh.addEventListener('click', async () => {
   }
 });
 
-btnTestWebhook.addEventListener('click', async () => {
+// Submit Webhook Test
+btnSubmitWebhook.addEventListener('click', async () => {
   const password = webhookPassword.value.trim();
   if (!password) {
     showNotification('Please enter the webhook test password.', 'error');
@@ -270,8 +332,8 @@ btnTestWebhook.addEventListener('click', async () => {
     return;
   }
 
-  btnTestWebhook.disabled = true;
-  btnTestWebhook.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Sending...';
+  btnSubmitWebhook.disabled = true;
+  btnSubmitWebhook.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Sending...';
 
   try {
     const res = await fetch('/api/test-webhook', {
@@ -285,19 +347,27 @@ btnTestWebhook.addEventListener('click', async () => {
     
     if (res.ok) {
       showNotification('Discord Webhook test message sent!', 'success');
-      webhookPassword.value = '';
+      closeAllModals();
     } else {
       showNotification(`Test failed: ${data.error || res.statusText}`, 'error');
     }
   } catch (err) {
     showNotification('Failed to reach server webhook endpoint', 'error');
   } finally {
-    btnTestWebhook.disabled = false;
-    btnTestWebhook.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Test Discord Webhook';
+    btnSubmitWebhook.disabled = false;
+    btnSubmitWebhook.innerHTML = 'Send Test';
   }
 });
 
-btnTrackUser.addEventListener('click', async () => {
+// Support enter key in password field
+webhookPassword.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    btnSubmitWebhook.click();
+  }
+});
+
+// Submit Switch Target User
+btnSubmitUser.addEventListener('click', async () => {
   const userId = inputUserId.value.trim();
   if (!userId || isNaN(parseInt(userId, 10))) {
     showNotification('Please enter a valid numeric Roblox User ID.', 'error');
@@ -305,8 +375,8 @@ btnTrackUser.addEventListener('click', async () => {
     return;
   }
 
-  btnTrackUser.disabled = true;
-  btnTrackUser.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Updating...';
+  btnSubmitUser.disabled = true;
+  btnSubmitUser.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Updating...';
 
   try {
     const res = await fetch('/api/track-user', {
@@ -320,7 +390,7 @@ btnTrackUser.addEventListener('click', async () => {
     
     if (res.ok) {
       showNotification(`Now tracking ${data.userProfile.displayName}!`, 'success');
-      inputUserId.value = '';
+      closeAllModals();
       
       // Update local client status and reset visual progress
       await fetchStatus();
@@ -331,8 +401,15 @@ btnTrackUser.addEventListener('click', async () => {
   } catch (err) {
     showNotification('Failed to switch tracked user', 'error');
   } finally {
-    btnTrackUser.disabled = false;
-    btnTrackUser.innerHTML = '<i class="fa-solid fa-user-plus"></i> Switch Target User';
+    btnSubmitUser.disabled = false;
+    btnSubmitUser.innerHTML = 'Track User';
+  }
+});
+
+// Support enter key in userid field
+inputUserId.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    btnSubmitUser.click();
   }
 });
 

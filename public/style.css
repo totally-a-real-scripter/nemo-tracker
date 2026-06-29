@@ -848,3 +848,102 @@ body {
   color: var(--color-primary);
 }
 
+/* ==========================================================================
+   Modal Overlay and Centered Modal Prompt Card
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(13, 15, 20, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  visibility: hidden;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+  visibility: visible;
+}
+
+.modal-card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass-focus);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  padding: 32px;
+  width: 90%;
+  max-width: 440px;
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  transform: translateY(-20px) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+  opacity: 0;
+}
+
+.modal-overlay.active .modal-card.active {
+  display: flex;
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 14px;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0 4px;
+  transition: var(--transition-smooth);
+}
+
+.modal-close:hover {
+  color: #ef4444;
+}
+
+.modal-body p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  border-top: 1px solid var(--border-glass);
+  padding-top: 20px;
+  margin-top: 8px;
+}
+
+.btn-half {
+  width: 50%;
+}
+

@@ -98,18 +98,18 @@
             </div>
           </div>
 
-          <div class="control-input-group" style="margin-bottom: 16px;">
-            <i class="fa-solid fa-lock input-icon"></i>
-            <input type="password" id="webhook-password" class="text-input" placeholder="Webhook Test Password (default: nemo123)">
-          </div>
-
-          <div class="control-buttons">
+          <div class="control-buttons" style="flex-direction: column; gap: 10px;">
             <button class="btn btn-secondary" id="btn-refresh" title="Manually query Roblox API immediately">
               <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Query Now
             </button>
-            <button class="btn btn-secondary" id="btn-test-webhook" title="Send a test message to the Discord Webhook">
-              <i class="fa-solid fa-paper-plane"></i> Test Discord Webhook
-            </button>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <button class="btn btn-secondary btn-half" id="btn-open-user-modal" title="Switch target user to track">
+                <i class="fa-solid fa-user-pen"></i> Switch User
+              </button>
+              <button class="btn btn-secondary btn-half" id="btn-open-webhook-modal" title="Send a test message to the Discord Webhook">
+                <i class="fa-solid fa-paper-plane"></i> Test Webhook
+              </button>
+            </div>
           </div>
 
           <div class="webhook-status" id="webhook-status-card">
@@ -122,18 +122,6 @@
             </div>
             <span class="webhook-badge active" id="webhook-badge-status">Active</span>
           </div>
-        </section>
-
-        <!-- Target Switcher Card -->
-        <section class="card config-card">
-          <h2 class="card-title"><i class="fa-solid fa-user-gear icon-margin"></i> Track Another User</h2>
-          <div class="control-input-group">
-            <i class="fa-solid fa-fingerprint input-icon"></i>
-            <input type="text" id="input-userid" class="text-input" placeholder="Enter Roblox User ID (e.g. 162336333)">
-          </div>
-          <button class="btn btn-primary" id="btn-track-user" style="margin-top: 16px;">
-            <i class="fa-solid fa-user-plus"></i> Switch Target User
-          </button>
         </section>
 
         <!-- Log Card -->
@@ -166,6 +154,47 @@
   <div class="toast" id="notification-toast">
     <i class="fa-solid fa-circle-info toast-icon" id="toast-icon"></i>
     <span class="toast-message" id="toast-message">Notification message here</span>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <!-- Webhook Test Modal -->
+    <div class="modal-card" id="webhook-modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-brands fa-discord webhook-discord-icon icon-margin"></i> Webhook Authentication</h3>
+        <button class="modal-close" id="btn-close-webhook-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Please enter the administrative password to send a test embed notification to the Discord channel.</p>
+        <div class="control-input-group" style="margin-top: 16px;">
+          <input type="password" id="webhook-password" class="text-input" placeholder="Enter password (default: nemo123)">
+          <i class="fa-solid fa-lock input-icon"></i>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-half" id="btn-cancel-webhook">Cancel</button>
+        <button class="btn btn-primary btn-half" id="btn-submit-webhook">Send Test</button>
+      </div>
+    </div>
+
+    <!-- Switch User Modal -->
+    <div class="modal-card" id="user-modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-user-gear icon-margin"></i> Track Another User</h3>
+        <button class="modal-close" id="btn-close-user-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Enter the numeric Roblox User ID of the player you would like to track (e.g. 490953671).</p>
+        <div class="control-input-group" style="margin-top: 16px;">
+          <input type="text" id="input-userid" class="text-input" placeholder="Enter Roblox User ID">
+          <i class="fa-solid fa-fingerprint input-icon"></i>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-half" id="btn-cancel-user">Cancel</button>
+        <button class="btn btn-primary btn-half" id="btn-submit-user">Track User</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
