@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=1.0.2">
+  <link rel="stylesheet" href="style.css?v=1.0.3">
 </head>
 <body class="dark-theme">
   <!-- Glowing Background Orbs -->
@@ -167,7 +167,7 @@
       <div class="modal-body">
         <p>Please enter the administrative password to send a test embed notification to the Discord channel.</p>
         <div class="control-input-group" style="margin-top: 16px;">
-          <input type="password" id="webhook-password" class="text-input" placeholder="Enter password (default: nemo123)">
+          <input type="password" id="webhook-password" class="text-input" placeholder="Enter password">
           <i class="fa-solid fa-lock input-icon"></i>
         </div>
       </div>
@@ -184,10 +184,14 @@
         <button class="modal-close" id="btn-close-user-modal">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Enter the numeric Roblox User ID of the player you would like to track (e.g. 490953671).</p>
+        <p>Enter the numeric Roblox User ID of the player and the administrative password to start tracking.</p>
         <div class="control-input-group" style="margin-top: 16px;">
           <input type="text" id="input-userid" class="text-input" placeholder="Enter Roblox User ID">
           <i class="fa-solid fa-fingerprint input-icon"></i>
+        </div>
+        <div class="control-input-group" style="margin-top: 16px;">
+          <input type="password" id="user-password" class="text-input" placeholder="Enter password">
+          <i class="fa-solid fa-lock input-icon"></i>
         </div>
       </div>
       <div class="modal-footer">
@@ -197,6 +201,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1.0.2"></script>
+  <script src="app.js?v=1.0.3"></script>
 </body>
 </html>

@@ -281,7 +281,13 @@ app.post('/api/refresh', async (req, res) => {
 });
 
 app.post('/api/track-user', async (req, res) => {
-  const { userId } = req.body;
+  const { userId, password } = req.body;
+  
+  if (password !== WEBHOOK_TEST_PASSWORD) {
+    console.log('[API] Switch tracking target denied: invalid password');
+    return res.status(403).json({ error: 'Forbidden: Incorrect password' });
+  }
+
   if (!userId || isNaN(parseInt(userId, 10))) {
     return res.status(400).json({ error: 'Invalid User ID. Please supply a numeric Roblox User ID.' });
   }

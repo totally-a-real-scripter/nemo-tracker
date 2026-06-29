@@ -44,6 +44,7 @@ const btnSubmitUser = document.getElementById('btn-submit-user');
 
 const webhookPassword = document.getElementById('webhook-password');
 const inputUserId = document.getElementById('input-userid');
+const userPassword = document.getElementById('user-password');
 
 const webhookUrlDesc = document.getElementById('webhook-url-desc');
 const webhookBadgeStatus = document.getElementById('webhook-badge-status');
@@ -288,6 +289,7 @@ function closeAllModals() {
   
   webhookPassword.value = '';
   inputUserId.value = '';
+  userPassword.value = '';
 }
 
 // UI Event Handlers for Modals
@@ -389,6 +391,13 @@ btnSubmitUser.addEventListener('click', async () => {
     return;
   }
 
+  const password = userPassword.value.trim();
+  if (!password) {
+    showNotification('Please enter the administrator password.', 'error');
+    userPassword.focus();
+    return;
+  }
+
   btnSubmitUser.disabled = true;
   btnSubmitUser.innerHTML = '<i class="fa-solid fa-spinner spin"></i> Updating...';
 
@@ -398,7 +407,7 @@ btnSubmitUser.addEventListener('click', async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ userId })
+      body: JSON.stringify({ userId, password })
     });
     const data = await res.json();
     
@@ -420,8 +429,14 @@ btnSubmitUser.addEventListener('click', async () => {
   }
 });
 
-// Support enter key in userid field
+// Support enter key in userid and password fields
 inputUserId.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    userPassword.focus();
+  }
+});
+
+userPassword.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     btnSubmitUser.click();
   }
