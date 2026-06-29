@@ -257,12 +257,18 @@ function startCountdown() {
 
 // Modal Toggle Handlers
 function showWebhookModal() {
+  modalOverlay.style.display = 'flex';
+  // Force reflow
+  modalOverlay.offsetHeight;
   modalOverlay.classList.add('active');
   webhookModal.classList.add('active');
   webhookPassword.focus();
 }
 
 function showUserModal() {
+  modalOverlay.style.display = 'flex';
+  // Force reflow
+  modalOverlay.offsetHeight;
   modalOverlay.classList.add('active');
   userModal.classList.add('active');
   inputUserId.focus();
@@ -272,6 +278,14 @@ function closeAllModals() {
   modalOverlay.classList.remove('active');
   webhookModal.classList.remove('active');
   userModal.classList.remove('active');
+  
+  // Hide completely after transition completes
+  setTimeout(() => {
+    if (!modalOverlay.classList.contains('active')) {
+      modalOverlay.style.display = 'none';
+    }
+  }, 250);
+  
   webhookPassword.value = '';
   inputUserId.value = '';
 }
