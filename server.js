@@ -220,7 +220,7 @@ async function pollRobloxPresence() {
       // Optionally notify on startup
       await sendDiscordWebhook(null, currentPresence);
       
-    } else if (hasStatusChanged || hasLocationChanged) {
+    } else if (hasStatusChanged) {
       const oldPresence = { ...currentPresence };
       
       currentPresence = {
@@ -236,20 +236,20 @@ async function pollRobloxPresence() {
       const oldInfo = getPresenceInfo(oldPresence.userPresenceType);
       const newInfo = getPresenceInfo(newPres.userPresenceType);
       
-      let changeMsg = '';
-      if (hasStatusChanged) {
-        changeMsg = `Status changed: ${oldInfo.label} → ${newInfo.label}`;
-      } else {
-        changeMsg = `Location updated: ${newPres.lastLocation}`;
-      }
-      
+      const changeMsg = `Status changed: ${oldInfo.label} → ${newInfo.label}`;
       console.log(`[Tracker] ${changeMsg}`);
       addLog('status_change', changeMsg, newPres.lastLocation || 'Website');
       
-      // Send Discord Webhook on status changes
+      // Send Discord Webhook ONLY when userPresenceType status changes
       await sendDiscordWebhook(oldPresence, currentPresence);
     } else {
-      // Status is the same, just update lastUpdated
+      // Status is the same, but location or game details may have updated.
+      // Update these silently in memory for the UI to display in real-time.
+      currentPresence.lastLocation = newPres.lastLocation || 'Unknown';
+      currentPresence.placeId = newPres.placeId;
+      currentPresence.rootPlaceId = newPres.rootPlaceId;
+      currentPresence.gameId = newPres.gameId;
+      currentPresence.universeId = newPres.universeId;
       currentPresence.lastUpdated = new Date().toISOString();
     }
 
