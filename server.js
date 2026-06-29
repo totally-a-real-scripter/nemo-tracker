@@ -101,6 +101,16 @@ async function fetchUserProfile() {
   }
 }
 
+// Filter out any Telegram channel ads or forbidden links to prevent forwarding spam
+function sanitizeText(text) {
+  if (!text) return '';
+  const str = text.toString();
+  if (/t\.me/i.test(str) || /A_ToolsX/i.test(str)) {
+    return '[Spam Link Filtered]';
+  }
+  return str;
+}
+
 // Send Embed to Discord Webhook
 async function sendDiscordWebhook(oldPresence, newPresence) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL === 'placeholder') {
@@ -113,7 +123,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
 
   const embed = {
     title: 'Roblox Status Change Notification',
-    description: `**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.`,
+    description: sanitizeText(`**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.`),
     url: `https://www.roblox.com/users/${robloxUserId}/profile`,
     color: newInfo.color,
     fields: [
@@ -141,7 +151,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
   if (newPresence.lastLocation && newPresence.lastLocation !== 'Unknown') {
     embed.fields.push({
       name: 'Activity / Location',
-      value: newPresence.lastLocation,
+      value: sanitizeText(newPresence.lastLocation),
       inline: false
     });
   }
