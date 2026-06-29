@@ -1,0 +1,13 @@
+{
+  "name": "roblox-status-tracker",
+  "version": "1.0.0",
+  "description": "Sleek Roblox status tracker with Discord Webhook integrations",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

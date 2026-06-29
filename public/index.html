@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sleek, real-time online status tracker for Roblox users, with Discord webhook integrations and clean glassmorphic design.">
+  <title>Nemo Tracker — Roblox Live Status</title>
+  
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <!-- Glowing Background Orbs -->
+  <div class="glow-orb glow-orb-1" id="bg-orb-1"></div>
+  <div class="glow-orb glow-orb-2" id="bg-orb-2"></div>
+  
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo">
+        <i class="fa-solid fa-compass-drafting logo-icon"></i>
+        <span>NEMO<span class="logo-accent">TRACKER</span></span>
+      </div>
+      <div class="system-status">
+        <span class="pulse-indicator active"></span>
+        <span class="system-text">Live Monitoring Active</span>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="app-main">
+      
+      <!-- Left Column: User status card -->
+      <section class="card status-card">
+        <div class="status-bg-gradient" id="status-card-gradient"></div>
+        
+        <div class="user-avatar-container">
+          <div class="avatar-ring" id="avatar-pulse-ring"></div>
+          <img src="" alt="Roblox User Avatar" class="user-avatar" id="user-avatar">
+          <div class="avatar-status-badge" id="avatar-status-dot"></div>
+        </div>
+
+        <div class="user-info">
+          <h1 class="display-name" id="display-name">Loading...</h1>
+          <div class="username-row">
+            <span class="username" id="username">@loading</span>
+            <span class="verified-badge" id="verified-badge" title="Verified Roblox Account">
+              <i class="fa-solid fa-circle-check"></i>
+            </span>
+          </div>
+          <p class="user-id">ID: <span id="roblox-user-id">...</span></p>
+        </div>
+
+        <div class="status-details">
+          <div class="detail-group">
+            <span class="detail-label">Current Status</span>
+            <div class="status-badge-container">
+              <span class="status-badge" id="status-badge">OFFLINE</span>
+            </div>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Current Activity / Location</span>
+            <span class="detail-value" id="status-location">Checking API...</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Last Status Update</span>
+            <span class="detail-value" id="status-last-updated">-</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <a href="" target="_blank" class="btn btn-primary" id="roblox-profile-link">
+            <i class="fa-solid fa-up-right-from-square"></i> Roblox Profile
+          </a>
+        </div>
+      </section>
+
+      <!-- Right Column: Controls & Logging -->
+      <div class="control-column">
+        
+        <!-- Controls Card -->
+        <section class="card config-card">
+          <h2 class="card-title"><i class="fa-solid fa-sliders icon-margin"></i> Tracker Controls</h2>
+          
+          <div class="progress-bar-container">
+            <div class="progress-header">
+              <span>Next Roblox API Query</span>
+              <span id="countdown-text">--s</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="countdown-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <div class="control-buttons">
+            <button class="btn btn-secondary" id="btn-refresh" title="Manually query Roblox API immediately">
+              <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Query Now
+            </button>
+            <button class="btn btn-secondary" id="btn-test-webhook" title="Send a test message to the Discord Webhook">
+              <i class="fa-solid fa-paper-plane"></i> Test Discord Webhook
+            </button>
+          </div>
+
+          <div class="webhook-status" id="webhook-status-card">
+            <div class="webhook-header">
+              <i class="fa-brands fa-discord webhook-discord-icon"></i>
+              <div>
+                <div class="webhook-title">Discord Webhook Status</div>
+                <div class="webhook-desc" id="webhook-url-desc">Configured: https://discord.com/...</div>
+              </div>
+            </div>
+            <span class="webhook-badge active" id="webhook-badge-status">Active</span>
+          </div>
+        </section>
+
+        <!-- Log Card -->
+        <section class="card log-card">
+          <div class="log-card-header">
+            <h2 class="card-title"><i class="fa-solid fa-clock-rotate-left icon-margin"></i> Activity Log</h2>
+            <button class="btn-clear" id="btn-clear-logs" title="Clear visual log list"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+          <div class="log-container" id="log-list">
+            <!-- Logs will be populated here by Javascript -->
+            <div class="log-empty-state" id="log-empty-state">
+              <i class="fa-solid fa-list-check empty-icon"></i>
+              <p>No activity recorded yet.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Nemo Tracker — Designed for Coolify Container Deployment</p>
+      <p class="footer-meta">Exposed Port: <span id="footer-port">8383</span> | Check Interval: <span id="footer-interval">15s</span></p>
+    </footer>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="notification-toast">
+    <i class="fa-solid fa-circle-info toast-icon" id="toast-icon"></i>
+    <span class="toast-message" id="toast-message">Notification message here</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

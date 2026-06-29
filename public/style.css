@@ -1,0 +1,805 @@
+/* ==========================================================================
+   Nemo Tracker Custom Style Sheet
+   Premium Dark / Glassmorphic UI Style
+   ========================================================================== */
+
+:root {
+  /* Design Tokens - Colors */
+  --bg-darker: #0d0f14;
+  --bg-dark: #121620;
+  --bg-glass: rgba(18, 22, 32, 0.65);
+  --bg-glass-hover: rgba(26, 32, 46, 0.75);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-focus: rgba(255, 255, 255, 0.15);
+  
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-dark: #6b7280;
+  
+  /* Status Colors */
+  --color-offline: #7f8c8d;
+  --color-online: #2ecc71;
+  --color-ingame: #3498db;
+  --color-instudio: #f1c40f;
+  
+  --color-offline-glow: rgba(127, 140, 141, 0.2);
+  --color-online-glow: rgba(46, 204, 113, 0.35);
+  --color-ingame-glow: rgba(52, 152, 219, 0.35);
+  --color-instudio-glow: rgba(241, 196, 15, 0.35);
+  
+  --color-primary: #6366f1; /* Indigo */
+  --color-primary-hover: #4f46e5;
+  --color-primary-glow: rgba(99, 102, 241, 0.3);
+
+  /* Fonts */
+  --font-main: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Card Radius & Animations */
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base resets & scrollbars */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-darker);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background Ambient Orbs */
+.glow-orb {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(150px);
+  z-index: -1;
+  opacity: 0.18;
+  pointer-events: none;
+  transition: var(--transition-smooth);
+}
+
+.glow-orb-1 {
+  background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+}
+
+.glow-orb-2 {
+  background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+  bottom: -150px;
+  left: -150px;
+}
+
+/* App Container Layout */
+.app-container {
+  width: 100%;
+  max-width: 1100px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.logo-icon {
+  color: var(--color-primary);
+  filter: drop-shadow(0 0 8px var(--color-primary-glow));
+}
+
+.logo-accent {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-online);
+  border-radius: 50%;
+  position: relative;
+}
+
+.pulse-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-online);
+  border-radius: 50%;
+  animation: pulse-ring 1.5s infinite;
+}
+
+.system-text {
+  color: var(--text-muted);
+}
+
+/* Cards System */
+.card {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.card:hover {
+  border-color: var(--border-glass-focus);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+}
+
+/* Grid Layout */
+.app-main {
+  display: grid;
+  grid-template-columns: 1.1fr 1.9fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.control-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Left Column: User Status Card Specifics */
+.status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 520px;
+}
+
+.status-bg-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: var(--color-offline);
+  transition: var(--transition-smooth);
+}
+
+.status-card.status-offline .status-bg-gradient { background: var(--color-offline); }
+.status-card.status-online .status-bg-gradient { background: var(--color-online); }
+.status-card.status-ingame .status-bg-gradient { background: var(--color-ingame); }
+.status-card.status-instudio .status-bg-gradient { background: var(--color-instudio); }
+
+/* Avatar layout */
+.user-avatar-container {
+  position: relative;
+  margin-top: 10px;
+  margin-bottom: 24px;
+}
+
+.user-avatar {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 4px solid var(--bg-dark);
+  object-fit: cover;
+  background-color: var(--bg-darker);
+  position: relative;
+  z-index: 2;
+}
+
+.avatar-ring {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  border: 2px dashed var(--color-offline);
+  z-index: 1;
+  transition: var(--transition-smooth);
+}
+
+/* Pulsing Avatar glow depending on status */
+.status-card.status-offline .avatar-ring {
+  border-color: var(--color-offline);
+  animation: rotate-ring 60s linear infinite;
+}
+.status-card.status-online .avatar-ring {
+  border-color: var(--color-online);
+  box-shadow: 0 0 20px var(--color-online-glow);
+  animation: rotate-ring 30s linear infinite, pulse-shadow-online 2s infinite ease-in-out;
+}
+.status-card.status-ingame .avatar-ring {
+  border-color: var(--color-ingame);
+  box-shadow: 0 0 25px var(--color-ingame-glow);
+  animation: rotate-ring 15s linear infinite, pulse-shadow-ingame 1.5s infinite ease-in-out;
+}
+.status-card.status-instudio .avatar-ring {
+  border-color: var(--color-instudio);
+  box-shadow: 0 0 20px var(--color-instudio-glow);
+  animation: rotate-ring 20s linear infinite, pulse-shadow-instudio 2s infinite ease-in-out;
+}
+
+.avatar-status-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--color-offline);
+  border: 4px solid var(--bg-dark);
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  z-index: 3;
+  transition: var(--transition-smooth);
+}
+
+.status-card.status-offline .avatar-status-badge { background-color: var(--color-offline); }
+.status-card.status-online .avatar-status-badge { background-color: var(--color-online); }
+.status-card.status-ingame .avatar-status-badge { background-color: var(--color-ingame); }
+.status-card.status-instudio .avatar-status-badge { background-color: var(--color-instudio); }
+
+/* Profile Typography */
+.user-info {
+  margin-bottom: 28px;
+  width: 100%;
+}
+
+.display-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.username-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.username {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.verified-badge {
+  color: #38bdf8;
+  font-size: 0.9rem;
+  display: flex;
+}
+
+.user-id {
+  font-size: 0.75rem;
+  color: var(--text-dark);
+  font-family: var(--font-mono);
+}
+
+/* Status details list */
+.status-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  margin-bottom: 24px;
+}
+
+.detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.status-badge-container {
+  display: flex;
+  margin-top: 2px;
+}
+
+.status-badge {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 5px 12px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  color: #fff;
+  background-color: var(--color-offline);
+  transition: var(--transition-smooth);
+}
+
+.status-card.status-offline .status-badge { background-color: var(--color-offline); box-shadow: 0 2px 10px var(--color-offline-glow); }
+.status-card.status-online .status-badge { background-color: var(--color-online); box-shadow: 0 2px 12px var(--color-online-glow); }
+.status-card.status-ingame .status-badge { background-color: var(--color-ingame); box-shadow: 0 2px 12px var(--color-ingame-glow); }
+.status-card.status-instudio .status-badge { background-color: var(--color-instudio); box-shadow: 0 2px 12px var(--color-instudio-glow); }
+
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+/* Right Column: Configuration & Controls */
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.icon-margin {
+  margin-right: 10px;
+  color: var(--color-primary);
+}
+
+/* Countdown bar */
+.progress-bar-container {
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, #ec4899 100%);
+  border-radius: 3px;
+  width: 100%;
+  transition: width 0.1s linear;
+}
+
+/* Buttons */
+.control-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 14px var(--color-primary-glow);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: 0 6px 20px var(--color-primary-glow);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Webhook Info Card */
+.webhook-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(88, 101, 242, 0.06);
+  border: 1px solid rgba(88, 101, 242, 0.15);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.webhook-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.webhook-discord-icon {
+  font-size: 1.5rem;
+  color: #5865f2;
+}
+
+.webhook-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.webhook-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+.webhook-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(88, 101, 242, 0.15);
+  color: #5865f2;
+}
+
+.webhook-badge.active {
+  background: rgba(46, 204, 113, 0.12);
+  color: var(--color-online);
+}
+
+/* Log Card Specifics */
+.log-card {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  max-height: 295px;
+}
+
+.log-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.log-card-header .card-title {
+  margin-bottom: 0;
+}
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 4px;
+  transition: var(--transition-smooth);
+}
+
+.btn-clear:hover {
+  color: #ef4444;
+}
+
+.log-container {
+  overflow-y: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+/* Custom Scrollbar for Logs */
+.log-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Log Item Style */
+.log-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  animation: slide-in 0.25s ease-out;
+  transition: var(--transition-smooth);
+}
+
+.log-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.log-icon-wrapper {
+  margin-top: 2px;
+  font-size: 0.95rem;
+}
+
+.log-icon-wrapper.log-status_change { color: var(--color-primary); }
+.log-icon-wrapper.log-error { color: #ef4444; }
+.log-icon-wrapper.log-init { color: var(--color-online); }
+
+.log-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-message {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.log-details {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.log-time {
+  font-size: 0.7rem;
+  color: var(--text-dark);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  margin-left: auto;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.log-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-dark);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 2.2rem;
+  opacity: 0.5;
+}
+
+.log-empty-state p {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Footer styles */
+.app-footer {
+  text-align: center;
+  padding: 16px 0;
+  font-size: 0.8rem;
+  color: var(--text-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-meta {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Notification Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-glass-focus);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  transform: translateY(120%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast-icon {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.toast-message {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Spin animation for refresh button */
+.spin {
+  animation: fa-spin 1s linear infinite;
+}
+
+/* Keyframes */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes rotate-ring {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Pulsing shadow status keyframes */
+@keyframes pulse-shadow-online {
+  0%, 100% { box-shadow: 0 0 12px rgba(46, 204, 113, 0.2); }
+  50% { box-shadow: 0 0 24px rgba(46, 204, 113, 0.6); }
+}
+
+@keyframes pulse-shadow-ingame {
+  0%, 100% { box-shadow: 0 0 15px rgba(52, 152, 219, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(52, 152, 219, 0.7); }
+}
+
+@keyframes pulse-shadow-instudio {
+  0%, 100% { box-shadow: 0 0 12px rgba(241, 196, 15, 0.2); }
+  50% { box-shadow: 0 0 24px rgba(241, 196, 15, 0.6); }
+}
+
+/* Media Queries */
+@media (max-width: 850px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+  
+  .status-card {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    align-items: center;
+  }
+  
+  .control-buttons {
+    flex-direction: column;
+  }
+  
+  .webhook-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .webhook-badge {
+    align-self: flex-end;
+  }
+}
