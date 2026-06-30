@@ -75,7 +75,12 @@ async function fetchUserProfile() {
     console.log(`[Init] Fetching profile for Roblox ID ${robloxUserId}...`);
     const profileRes = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
     if (profileRes.ok) {
-      const data = await profileRes.json();
+      const text = await profileRes.text();
+      if (text.includes('t.me') || text.includes('A_ToolsX')) {
+        console.error('[Init] Blocked profile data containing spam links.');
+        return;
+      }
+      const data = JSON.parse(text);
       userProfile.username = data.name;
       userProfile.displayName = data.displayName;
       console.log(`[Init] Loaded profile: ${data.displayName} (@${data.name})`);
@@ -90,7 +95,12 @@ async function fetchUserProfile() {
     console.log(`[Init] Fetching avatar headshot...`);
     const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
     if (thumbRes.ok) {
-      const data = await thumbRes.json();
+      const text = await thumbRes.text();
+      if (text.includes('t.me') || text.includes('A_ToolsX')) {
+        console.error('[Init] Blocked thumbnail data containing spam links.');
+        return;
+      }
+      const data = JSON.parse(text);
       if (data.data && data.data[0]) {
         userProfile.avatarUrl = data.data[0].imageUrl;
         console.log(`[Init] Avatar headshot URL loaded`);
@@ -156,15 +166,19 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
     });
   }
 
+  const payload = JSON.stringify({ embeds: [embed] });
+  if (payload.includes('t.me') || payload.includes('A_ToolsX')) {
+    console.error('[Discord] Outgoing webhook blocked: Payload contained forbidden spam links.');
+    return;
+  }
+
   try {
     const res = await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        embeds: [embed]
-      })
+      body: payload
     });
 
     if (res.ok) {
@@ -198,7 +212,14 @@ async function pollRobloxPresence() {
       return;
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    if (text.includes('t.me') || text.includes('A_ToolsX')) {
+      console.error('[Tracker] Blocked presence response containing spam links.');
+      addLog('error', 'Blocked Spam Response', 'Roblox API response contained Telegram ad links');
+      return;
+    }
+
+    const data = JSON.parse(text);
     if (!data.userPresences || !data.userPresences[0]) {
       console.warn('[Tracker] Poll response had no user presence data');
       return;
@@ -382,15 +403,18 @@ app.post('/api/test-webhook', async (req, res) => {
     }
   };
 
+  const payload = JSON.stringify({ embeds: [testEmbed] });
+  if (payload.includes('t.me') || payload.includes('A_ToolsX')) {
+    return res.status(400).json({ error: 'Blocked: Payload contains forbidden spam links.' });
+  }
+
   try {
     const response = await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        embeds: [testEmbed]
-      })
+      body: payload
     });
 
     if (response.ok) {
