@@ -80,7 +80,7 @@ function secureFetch(urlStr, options = {}) {
 
 // Configurations
 const PORT = process.env.PORT || 8383;
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1521254361433505922/50CJR3_yifDYyD4H9UuPjIxbZHWpYo2lqk71cZjZN8eIpV5rfRFhByzItiP1wtgmJ1UT';
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/1521388719968489552/Lzix6zQz_I_O5ASCbbxYc1YzbqJu9MMeOjnK0glqrvG2u37NEgEzG9oIwC35txnCfsQp';
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '15000', 10);
 const WEBHOOK_TEST_PASSWORD = process.env.WEBHOOK_TEST_PASSWORD || 'nemo123';
 
