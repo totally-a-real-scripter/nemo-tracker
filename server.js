@@ -1,9 +1,80 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import https from 'https';
+import tls from 'tls';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Secure HTTPS request helper enforcing SSL pinning / CA issuer checks
+function secureFetch(urlStr, options = {}) {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = new URL(urlStr);
+      const method = options.method || 'GET';
+      const headers = { ...options.headers };
+      const body = options.body || null;
+
+      if (body) {
+        headers['Content-Length'] = Buffer.byteLength(body);
+      }
+
+      const reqOptions = {
+        method,
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + url.search,
+        headers,
+        rejectUnauthorized: true,
+        checkServerIdentity: (hostname, cert) => {
+          const hostCheck = tls.checkServerIdentity(hostname, cert);
+          if (hostCheck) return hostCheck;
+
+          const issuer = cert.issuer ? JSON.stringify(cert.issuer) : '';
+          const allowedIssuers = ['Google Trust Services', 'Cloudflare', 'DigiCert', 'Let\'s Encrypt', 'Sectigo', 'GTS'];
+          const isAllowed = allowedIssuers.some(allowed => issuer.includes(allowed));
+          
+          if (!isAllowed) {
+            return new Error(`TLS handshake aborted: Unallowed or hijacked CA issuer: "${issuer}"`);
+          }
+          return undefined;
+        }
+      };
+
+      const req = https.request(reqOptions, (res) => {
+        let responseBody = '';
+        res.on('data', (chunk) => { responseBody += chunk; });
+        res.on('end', () => {
+          resolve({
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode,
+            statusText: res.statusMessage,
+            text: () => Promise.resolve(responseBody),
+            json: () => {
+              try {
+                return Promise.resolve(JSON.parse(responseBody));
+              } catch (e) {
+                return Promise.reject(e);
+              }
+            }
+          });
+        });
+      });
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+
+      if (body) {
+        req.write(body);
+      }
+      req.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 // Configurations
 const PORT = process.env.PORT || 8383;
@@ -73,7 +144,7 @@ function getPresenceInfo(presenceType) {
 async function fetchUserProfile() {
   try {
     console.log(`[Init] Fetching profile for Roblox ID ${robloxUserId}...`);
-    const profileRes = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
+    const profileRes = await secureFetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
     if (profileRes.ok) {
       const text = await profileRes.text();
       if (hasSpam(text)) {
@@ -93,7 +164,7 @@ async function fetchUserProfile() {
 
   try {
     console.log(`[Init] Fetching avatar headshot...`);
-    const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
+    const thumbRes = await secureFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
     if (thumbRes.ok) {
       const text = await thumbRes.text();
       if (hasSpam(text)) {
@@ -183,7 +254,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
   }
 
   try {
-    const res = await fetch(DISCORD_WEBHOOK_URL, {
+    const res = await secureFetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -207,7 +278,7 @@ async function pollRobloxPresence() {
     const url = 'https://presence.roblox.com/v1/presence/users';
     const body = JSON.stringify({ userIds: [parseInt(robloxUserId, 10)] });
 
-    const response = await fetch(url, {
+    const response = await secureFetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -419,7 +490,7 @@ app.post('/api/test-webhook', async (req, res) => {
   }
 
   try {
-    const response = await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await secureFetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
