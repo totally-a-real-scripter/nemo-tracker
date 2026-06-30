@@ -1,3 +1,19 @@
-[
-  "162336333"
-]
+{
+  "162336333": {
+    "profile": {
+      "id": "162336333",
+      "username": "BriefNemo01",
+      "displayName": "Nemo",
+      "avatarUrl": "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-BE89BAFEAD79F21B533D3BE224E0EE55-Png/150/150/AvatarHeadshot/Png/noFilter"
+    },
+    "presence": {
+      "userPresenceType": null,
+      "lastLocation": "Unknown",
+      "placeId": null,
+      "rootPlaceId": null,
+      "gameId": null,
+      "universeId": null,
+      "lastUpdated": null
+    }
+  }
+}

@@ -99,24 +99,73 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 // In-memory application state: map of userId -> { profile, presence }
 let trackedUsers = {};
+let isRateLimited = false;
+let rateLimitResetTime = null;
 
-async function loadTrackedUserIds() {
+async function loadTrackedUsers() {
   try {
     if (existsSync(TRACKED_USERS_FILE)) {
       const fileContent = await fs.readFile(TRACKED_USERS_FILE, 'utf-8');
-      return JSON.parse(fileContent);
+      const parsed = JSON.parse(fileContent);
+      
+      // Migrate legacy string array structure to new map object structure
+      if (Array.isArray(parsed)) {
+        console.log('[Config] Migrating legacy array format in tracked_users.json...');
+        const migrated = {};
+        for (const id of parsed) {
+          migrated[id] = {
+            profile: {
+              id: id.toString(),
+              username: 'Unknown',
+              displayName: 'Loading...',
+              avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+            },
+            presence: {
+              userPresenceType: null,
+              lastLocation: 'Unknown',
+              placeId: null,
+              rootPlaceId: null,
+              gameId: null,
+              universeId: null,
+              lastUpdated: null
+            }
+          };
+        }
+        await saveTrackedUsers(migrated);
+        return migrated;
+      }
+      
+      return parsed;
     }
   } catch (e) {
     console.error('[Config] Failed to read tracked_users.json:', e);
   }
-  const defaultIds = [defaultRobloxUserId];
-  await saveTrackedUserIds(defaultIds);
-  return defaultIds;
+  const defaultUsers = {
+    [defaultRobloxUserId]: {
+      profile: {
+        id: defaultRobloxUserId,
+        username: 'Unknown',
+        displayName: 'Loading...',
+        avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      },
+      presence: {
+        userPresenceType: null,
+        lastLocation: 'Unknown',
+        placeId: null,
+        rootPlaceId: null,
+        gameId: null,
+        universeId: null,
+        lastUpdated: null
+      }
+    }
+  };
+  await saveTrackedUsers(defaultUsers);
+  return defaultUsers;
 }
 
-async function saveTrackedUserIds(ids) {
+async function saveTrackedUsers(users) {
   try {
-    await fs.writeFile(TRACKED_USERS_FILE, JSON.stringify(ids, null, 2), 'utf-8');
+    await fs.writeFile(TRACKED_USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
   } catch (e) {
     console.error('[Config] Failed to write tracked_users.json:', e);
   }
@@ -154,6 +203,12 @@ function getPresenceInfo(presenceType) {
 async function fetchUserProfile(userId) {
   if (!trackedUsers[userId]) return;
   const user = trackedUsers[userId];
+
+  // Skip fetching if profile is already cached/loaded
+  if (user.profile.username !== 'Unknown' && user.profile.avatarUrl && !user.profile.avatarUrl.includes('data:image')) {
+    console.log(`[Init] Using cached profile for Roblox ID ${userId}: ${user.profile.displayName}`);
+    return;
+  }
 
   try {
     console.log(`[Init] Fetching profile for Roblox ID ${userId}...`);
@@ -193,6 +248,9 @@ async function fetchUserProfile(userId) {
   } catch (error) {
     console.error(`[Init] Error fetching avatar headshot for ID ${userId}:`, error);
   }
+
+  // Save updated cache to disk
+  await saveTrackedUsers(trackedUsers);
 }
 
 // Check if a string contains any spam signatures or links (case-insensitive)
@@ -287,6 +345,11 @@ async function sendDiscordWebhook(oldPresence, newPresence, profile) {
 
 // Poll Roblox API for presence status of all tracked users
 async function pollRobloxPresence() {
+  if (isRateLimited && Date.now() < rateLimitResetTime) {
+    console.log('[Tracker] Skipping poll: Temporarily backed off due to Roblox API rate limits.');
+    return;
+  }
+
   const userIds = Object.keys(trackedUsers);
   if (userIds.length === 0) return;
 
@@ -303,11 +366,22 @@ async function pollRobloxPresence() {
       body: body
     });
 
+    if (response.status === 429) {
+      console.warn('[Tracker] Roblox API Rate Limit encountered (429)! Backing off for 60 seconds.');
+      isRateLimited = true;
+      rateLimitResetTime = Date.now() + 60000;
+      addLog('error', 'Roblox Rate Limited (429)', 'API requests throttled. Backing off for 60 seconds.');
+      return;
+    }
+
     if (!response.ok) {
       console.warn(`[Tracker] Poll failed: ${response.status} ${response.statusText}`);
       addLog('error', 'Roblox API Error', `Status ${response.status}: ${response.statusText}`);
       return;
     }
+
+    // Success, clear rate limit
+    isRateLimited = false;
 
     const text = await response.text();
     if (hasSpam(text)) {
@@ -462,9 +536,8 @@ app.post('/api/track-user', async (req, res) => {
 
     await pollRobloxPresence();
 
-    // Persist list of IDs to file
-    const currentIds = Object.keys(trackedUsers);
-    await saveTrackedUserIds(currentIds);
+    // Persist updated users state to file
+    await saveTrackedUsers(trackedUsers);
 
     res.json({ success: true, user: trackedUsers[targetId] });
   } catch (err) {
@@ -495,9 +568,8 @@ app.post('/api/untrack-user', async (req, res) => {
   const displayName = trackedUsers[targetId].profile.displayName;
   delete trackedUsers[targetId];
 
-  // Persist list of IDs to file
-  const currentIds = Object.keys(trackedUsers);
-  await saveTrackedUserIds(currentIds);
+  // Persist updated users state to file
+  await saveTrackedUsers(trackedUsers);
 
   addLog('config_change', `Stopped tracking ${displayName} (ID: ${targetId})`, 'Removed from tracker list');
 
@@ -579,31 +651,12 @@ app.post('/api/test-webhook', async (req, res) => {
 
 // App Startup
 async function startApp() {
-  // Load tracked IDs
-  const ids = await loadTrackedUserIds();
+  // Load tracked users (with cached profiles)
+  trackedUsers = await loadTrackedUsers();
   
-  // Initialize map structure
-  for (const id of ids) {
-    trackedUsers[id] = {
-      profile: {
-        id,
-        username: 'Unknown',
-        displayName: 'Loading...',
-        avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-      },
-      presence: {
-        userPresenceType: null,
-        lastLocation: 'Unknown',
-        placeId: null,
-        rootPlaceId: null,
-        gameId: null,
-        universeId: null,
-        lastUpdated: null
-      }
-    };
-  }
+  const ids = Object.keys(trackedUsers);
 
-  // 1. Fetch initial profile information for all users in parallel
+  // Fetch initial profile information for any user that is missing details
   await Promise.all(ids.map(id => fetchUserProfile(id)));
   
   // 2. Perform initial presence poll

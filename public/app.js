@@ -627,11 +627,6 @@ btnClearLogs.addEventListener('click', () => {
 async function init() {
   await fetchStatus();
   startCountdown();
-  
-  // Also poll status every 3 seconds to keep UI synchronized in real-time
-  setInterval(() => {
-    fetchStatus();
-  }, 3000);
 }
 
 init();
