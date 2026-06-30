@@ -133,7 +133,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
 
   const embed = {
     title: 'Roblox Status Change Notification',
-    description: sanitizeText(`**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.`),
+    description: sanitizeText(`**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.\n\n🌐 **[View Live Tracker](https://nemotracker.breymac.space)**`),
     url: `https://www.roblox.com/users/${robloxUserId}/profile`,
     color: newInfo.color,
     fields: [
@@ -374,7 +374,7 @@ app.post('/api/test-webhook', async (req, res) => {
 
   const testEmbed = {
     title: '🚀 Nemo Tracker - Webhook Test',
-    description: 'This is a test notification confirming that the status change webhook integration is active and working correctly!',
+    description: 'This is a test notification confirming that the status change webhook integration is active and working correctly!\n\n🌐 **[View Live Tracker](https://nemotracker.breymac.space)**',
     url: `https://www.roblox.com/users/${robloxUserId}/profile`,
     color: 0x3498db, // In-game blue
     fields: [
