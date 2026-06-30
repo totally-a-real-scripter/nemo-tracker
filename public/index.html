@@ -36,50 +36,14 @@
     <!-- Main Content Grid -->
     <main class="app-main">
       
-      <!-- Left Column: User status card -->
-      <section class="card status-card">
-        <div class="status-bg-gradient" id="status-card-gradient"></div>
-        
-        <div class="user-avatar-container">
-          <div class="avatar-ring" id="avatar-pulse-ring"></div>
-          <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Roblox User Avatar" class="user-avatar" id="user-avatar">
-          <div class="avatar-status-badge" id="avatar-status-dot"></div>
+      <!-- Left Column: Grid of user status cards -->
+      <div class="users-container" id="users-container">
+        <!-- Render status cards dynamically -->
+        <div class="loading-state-container" id="loading-state-container" style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <i class="fa-solid fa-spinner spin" style="font-size: 2rem; margin-bottom: 12px; color: var(--color-primary);"></i>
+          <p>Loading tracked accounts...</p>
         </div>
-
-        <div class="user-info">
-          <h1 class="display-name" id="display-name">Loading...</h1>
-          <div class="username-row">
-            <span class="username" id="username">@loading</span>
-            <span class="verified-badge" id="verified-badge" title="Verified Roblox Account">
-              <i class="fa-solid fa-circle-check"></i>
-            </span>
-          </div>
-          <p class="user-id">ID: <span id="roblox-user-id">...</span></p>
-        </div>
-
-        <div class="status-details">
-          <div class="detail-group">
-            <span class="detail-label">Current Status</span>
-            <div class="status-badge-container">
-              <span class="status-badge" id="status-badge">OFFLINE</span>
-            </div>
-          </div>
-          <div class="detail-group">
-            <span class="detail-label">Current Activity / Location</span>
-            <span class="detail-value" id="status-location">Checking API...</span>
-          </div>
-          <div class="detail-group">
-            <span class="detail-label">Last Status Update</span>
-            <span class="detail-value" id="status-last-updated">-</span>
-          </div>
-        </div>
-
-        <div class="card-actions">
-          <a href="" target="_blank" class="btn btn-primary" id="roblox-profile-link">
-            <i class="fa-solid fa-up-right-from-square"></i> Roblox Profile
-          </a>
-        </div>
-      </section>
+      </div>
 
       <!-- Right Column: Controls & Logging -->
       <div class="control-column">
@@ -199,8 +163,27 @@
         <button class="btn btn-primary btn-half" id="btn-submit-user">Track User</button>
       </div>
     </div>
+
+    <!-- Untrack User Modal -->
+    <div class="modal-card" id="untrack-modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-user-slash icon-margin"></i> Stop Tracking Account</h3>
+        <button class="modal-close" id="btn-close-untrack-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Please enter the administrative password to confirm removing <strong id="untrack-user-name">this user</strong> from the tracker.</p>
+        <div class="control-input-group" style="margin-top: 16px;">
+          <input type="password" id="untrack-password" class="text-input" placeholder="Enter password">
+          <i class="fa-solid fa-lock input-icon"></i>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-half" id="btn-cancel-untrack">Cancel</button>
+        <button class="btn btn-primary btn-half" id="btn-submit-untrack">Stop Tracking</button>
+      </div>
+    </div>
   </div>
 
-  <script src="app.js?v=1.0.4"></script>
+  <script src="app.js?v=1.0.5"></script>
 </body>
 </html>

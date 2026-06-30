@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import https from 'https';
 import tls from 'tls';
+import fs from 'fs/promises';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,7 +84,8 @@ const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || 'https://discord.
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '15000', 10);
 const WEBHOOK_TEST_PASSWORD = process.env.WEBHOOK_TEST_PASSWORD || 'nemo123';
 
-let robloxUserId = process.env.ROBLOX_USER_ID || '162336333';
+const defaultRobloxUserId = process.env.ROBLOX_USER_ID || '162336333';
+const TRACKED_USERS_FILE = path.join(__dirname, 'tracked_users.json');
 
 const app = express();
 app.use(express.json());
@@ -94,23 +97,30 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// In-memory application state
-let userProfile = {
-  id: robloxUserId,
-  username: 'Unknown',
-  displayName: 'Loading User...',
-  avatarUrl: 'https://images.rbxcdn.com/3d559e2b17a149b5dfd4f8f4117b3a72.png'
-};
+// In-memory application state: map of userId -> { profile, presence }
+let trackedUsers = {};
 
-let currentPresence = {
-  userPresenceType: null, // null = uninitialized
-  lastLocation: 'Unknown',
-  placeId: null,
-  rootPlaceId: null,
-  gameId: null,
-  universeId: null,
-  lastUpdated: null
-};
+async function loadTrackedUserIds() {
+  try {
+    if (existsSync(TRACKED_USERS_FILE)) {
+      const fileContent = await fs.readFile(TRACKED_USERS_FILE, 'utf-8');
+      return JSON.parse(fileContent);
+    }
+  } catch (e) {
+    console.error('[Config] Failed to read tracked_users.json:', e);
+  }
+  const defaultIds = [defaultRobloxUserId];
+  await saveTrackedUserIds(defaultIds);
+  return defaultIds;
+}
+
+async function saveTrackedUserIds(ids) {
+  try {
+    await fs.writeFile(TRACKED_USERS_FILE, JSON.stringify(ids, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('[Config] Failed to write tracked_users.json:', e);
+  }
+}
 
 // Activity logs history (limit to 50)
 const logs = [];
@@ -140,45 +150,48 @@ function getPresenceInfo(presenceType) {
   return PRESENCE_TYPES[presenceType] || { label: 'Unknown', color: 0x7f8c8d, hexColor: '#7f8c8d' };
 }
 
-// Fetch User details and headshot avatar at startup
-async function fetchUserProfile() {
+// Fetch User details and headshot avatar for a specific user ID
+async function fetchUserProfile(userId) {
+  if (!trackedUsers[userId]) return;
+  const user = trackedUsers[userId];
+
   try {
-    console.log(`[Init] Fetching profile for Roblox ID ${robloxUserId}...`);
-    const profileRes = await secureFetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
+    console.log(`[Init] Fetching profile for Roblox ID ${userId}...`);
+    const profileRes = await secureFetch(`https://users.roblox.com/v1/users/${userId}`);
     if (profileRes.ok) {
       const text = await profileRes.text();
       if (hasSpam(text)) {
-        console.error('[Init] Blocked profile data containing spam links.');
+        console.error(`[Init] Blocked profile data containing spam links for ID ${userId}.`);
         return;
       }
       const data = JSON.parse(text);
-      userProfile.username = data.name;
-      userProfile.displayName = data.displayName;
-      console.log(`[Init] Loaded profile: ${data.displayName} (@${data.name})`);
+      user.profile.username = data.name;
+      user.profile.displayName = data.displayName;
+      console.log(`[Init] Loaded profile for ID ${userId}: ${data.displayName} (@${data.name})`);
     } else {
-      console.warn(`[Init] Profile fetch failed: ${profileRes.statusText}`);
+      console.warn(`[Init] Profile fetch failed for ID ${userId}: ${profileRes.statusText}`);
     }
   } catch (error) {
-    console.error('[Init] Error fetching user profile:', error);
+    console.error(`[Init] Error fetching user profile for ID ${userId}:`, error);
   }
 
   try {
-    console.log(`[Init] Fetching avatar headshot...`);
-    const thumbRes = await secureFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
+    console.log(`[Init] Fetching avatar headshot for ID ${userId}...`);
+    const thumbRes = await secureFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`);
     if (thumbRes.ok) {
       const text = await thumbRes.text();
       if (hasSpam(text)) {
-        console.error('[Init] Blocked thumbnail data containing spam links.');
+        console.error(`[Init] Blocked thumbnail data containing spam links for ID ${userId}.`);
         return;
       }
       const data = JSON.parse(text);
       if (data.data && data.data[0]) {
-        userProfile.avatarUrl = data.data[0].imageUrl;
-        console.log(`[Init] Avatar headshot URL loaded`);
+        user.profile.avatarUrl = data.data[0].imageUrl;
+        console.log(`[Init] Avatar headshot URL loaded for ID ${userId}`);
       }
     }
   } catch (error) {
-    console.error('[Init] Error fetching avatar headshot:', error);
+    console.error(`[Init] Error fetching avatar headshot for ID ${userId}:`, error);
   }
 }
 
@@ -203,7 +216,7 @@ function sanitizeText(text) {
 }
 
 // Send Embed to Discord Webhook
-async function sendDiscordWebhook(oldPresence, newPresence) {
+async function sendDiscordWebhook(oldPresence, newPresence, profile) {
   if (!DISCORD_WEBHOOK_URL || DISCORD_WEBHOOK_URL === 'placeholder') {
     console.log('[Discord] Webhook URL not set, skipping message.');
     return;
@@ -214,8 +227,8 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
 
   const embed = {
     title: 'Roblox Status Change Notification',
-    description: sanitizeText(`**${userProfile.displayName}** (@${userProfile.username}) has updated their online status.\n\n🌐 **[View Live Tracker](https://nemotracker.breymac.space)**`),
-    url: `https://www.roblox.com/users/${robloxUserId}/profile`,
+    description: sanitizeText(`**${profile.displayName}** (@${profile.username}) has updated their online status.\n\n🌐 **[View Live Tracker](https://nemotracker.breymac.space)**`),
+    url: `https://www.roblox.com/users/${profile.id}/profile`,
     color: newInfo.color,
     fields: [
       {
@@ -230,7 +243,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
       }
     ],
     thumbnail: {
-      url: userProfile.avatarUrl
+      url: profile.avatarUrl
     },
     timestamp: new Date().toISOString(),
     footer: {
@@ -263,7 +276,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
     });
 
     if (res.ok) {
-      console.log(`[Discord] Webhook sent successfully for status change: ${oldInfo.label} -> ${newInfo.label}`);
+      console.log(`[Discord] Webhook sent successfully for status change of ${profile.displayName}: ${oldInfo.label} -> ${newInfo.label}`);
     } else {
       console.error(`[Discord] Webhook failed with status ${res.status}: ${res.statusText}`);
     }
@@ -272,11 +285,14 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
   }
 }
 
-// Poll Roblox API for presence status
+// Poll Roblox API for presence status of all tracked users
 async function pollRobloxPresence() {
+  const userIds = Object.keys(trackedUsers);
+  if (userIds.length === 0) return;
+
   try {
     const url = 'https://presence.roblox.com/v1/presence/users';
-    const body = JSON.stringify({ userIds: [parseInt(robloxUserId, 10)] });
+    const body = JSON.stringify({ userIds: userIds.map(id => parseInt(id, 10)) });
 
     const response = await secureFetch(url, {
       method: 'POST',
@@ -301,68 +317,71 @@ async function pollRobloxPresence() {
     }
 
     const data = JSON.parse(text);
-    if (!data.userPresences || !data.userPresences[0]) {
+    if (!data.userPresences || data.userPresences.length === 0) {
       console.warn('[Tracker] Poll response had no user presence data');
       return;
     }
 
-    const newPres = data.userPresences[0];
-    
-    // Check if status changed
-    const isFirstRun = currentPresence.userPresenceType === null;
-    const hasStatusChanged = currentPresence.userPresenceType !== newPres.userPresenceType;
-    const hasLocationChanged = currentPresence.lastLocation !== newPres.lastLocation;
+    for (const newPres of data.userPresences) {
+      const userId = newPres.userId.toString();
+      const user = trackedUsers[userId];
+      if (!user) continue;
 
-    if (isFirstRun) {
-      // First run: setup state
-      currentPresence = {
-        userPresenceType: newPres.userPresenceType,
-        lastLocation: newPres.lastLocation || 'Unknown',
-        placeId: newPres.placeId,
-        rootPlaceId: newPres.rootPlaceId,
-        gameId: newPres.gameId,
-        universeId: newPres.universeId,
-        lastUpdated: new Date().toISOString()
-      };
+      const currentPresence = user.presence;
       
-      const newInfo = getPresenceInfo(newPres.userPresenceType);
-      console.log(`[Tracker] Initialized status: ${newInfo.label} (${currentPresence.lastLocation})`);
-      addLog('init', `Tracker Initialized: Status is ${newInfo.label}`, currentPresence.lastLocation);
-      
-      // Optionally notify on startup
-      await sendDiscordWebhook(null, currentPresence);
-      
-    } else if (hasStatusChanged) {
-      const oldPresence = { ...currentPresence };
-      
-      currentPresence = {
-        userPresenceType: newPres.userPresenceType,
-        lastLocation: newPres.lastLocation || 'Unknown',
-        placeId: newPres.placeId,
-        rootPlaceId: newPres.rootPlaceId,
-        gameId: newPres.gameId,
-        universeId: newPres.universeId,
-        lastUpdated: new Date().toISOString()
-      };
+      const isFirstRun = currentPresence.userPresenceType === null;
+      const hasStatusChanged = currentPresence.userPresenceType !== newPres.userPresenceType;
 
-      const oldInfo = getPresenceInfo(oldPresence.userPresenceType);
-      const newInfo = getPresenceInfo(newPres.userPresenceType);
-      
-      const changeMsg = `Status changed: ${oldInfo.label} → ${newInfo.label}`;
-      console.log(`[Tracker] ${changeMsg}`);
-      addLog('status_change', changeMsg, newPres.lastLocation || 'Website');
-      
-      // Send Discord Webhook ONLY when userPresenceType status changes
-      await sendDiscordWebhook(oldPresence, currentPresence);
-    } else {
-      // Status is the same, but location or game details may have updated.
-      // Update these silently in memory for the UI to display in real-time.
-      currentPresence.lastLocation = newPres.lastLocation || 'Unknown';
-      currentPresence.placeId = newPres.placeId;
-      currentPresence.rootPlaceId = newPres.rootPlaceId;
-      currentPresence.gameId = newPres.gameId;
-      currentPresence.universeId = newPres.universeId;
-      currentPresence.lastUpdated = new Date().toISOString();
+      if (isFirstRun) {
+        // First run setup
+        user.presence = {
+          userPresenceType: newPres.userPresenceType,
+          lastLocation: newPres.lastLocation || 'Unknown',
+          placeId: newPres.placeId,
+          rootPlaceId: newPres.rootPlaceId,
+          gameId: newPres.gameId,
+          universeId: newPres.universeId,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        const newInfo = getPresenceInfo(newPres.userPresenceType);
+        console.log(`[Tracker] Initialized status for ${user.profile.displayName}: ${newInfo.label} (${user.presence.lastLocation})`);
+        addLog('init', `Tracker Initialized for ${user.profile.displayName}: Status is ${newInfo.label}`, user.presence.lastLocation);
+        
+        // Notify on startup
+        await sendDiscordWebhook(null, user.presence, user.profile);
+        
+      } else if (hasStatusChanged) {
+        const oldPresence = { ...currentPresence };
+        
+        user.presence = {
+          userPresenceType: newPres.userPresenceType,
+          lastLocation: newPres.lastLocation || 'Unknown',
+          placeId: newPres.placeId,
+          rootPlaceId: newPres.rootPlaceId,
+          gameId: newPres.gameId,
+          universeId: newPres.universeId,
+          lastUpdated: new Date().toISOString()
+        };
+
+        const oldInfo = getPresenceInfo(oldPresence.userPresenceType);
+        const newInfo = getPresenceInfo(newPres.userPresenceType);
+        
+        const changeMsg = `${user.profile.displayName} Status changed: ${oldInfo.label} → ${newInfo.label}`;
+        console.log(`[Tracker] ${changeMsg}`);
+        addLog('status_change', changeMsg, newPres.lastLocation || 'Website');
+        
+        // Send Discord Webhook on status changes
+        await sendDiscordWebhook(oldPresence, user.presence, user.profile);
+      } else {
+        // Status remains the same, update details silently
+        user.presence.lastLocation = newPres.lastLocation || 'Unknown';
+        user.presence.placeId = newPres.placeId;
+        user.presence.rootPlaceId = newPres.rootPlaceId;
+        user.presence.gameId = newPres.gameId;
+        user.presence.universeId = newPres.universeId;
+        user.presence.lastUpdated = new Date().toISOString();
+      }
     }
 
   } catch (error) {
@@ -374,13 +393,14 @@ async function pollRobloxPresence() {
 // REST Endpoints
 app.get('/api/status', (req, res) => {
   res.json({
-    userProfile,
-    currentPresence,
+    users: Object.values(trackedUsers).map(u => ({
+      profile: u.profile,
+      presence: u.presence
+    })),
     logs,
     config: {
       pollIntervalMs: POLL_INTERVAL_MS,
       customPort: PORT,
-      robloxUserId: robloxUserId,
       discordWebhookUrlSet: !!DISCORD_WEBHOOK_URL
     }
   });
@@ -389,14 +409,14 @@ app.get('/api/status', (req, res) => {
 app.post('/api/refresh', async (req, res) => {
   console.log('[API] Manual refresh requested');
   await pollRobloxPresence();
-  res.json({ success: true, currentPresence });
+  res.json({ success: true, users: Object.values(trackedUsers) });
 });
 
 app.post('/api/track-user', async (req, res) => {
   const { userId, password } = req.body;
   
   if (password !== WEBHOOK_TEST_PASSWORD) {
-    console.log('[API] Switch tracking target denied: invalid password');
+    console.log('[API] Track user denied: invalid password');
     return res.status(403).json({ error: 'Forbidden: Incorrect password' });
   }
 
@@ -405,39 +425,83 @@ app.post('/api/track-user', async (req, res) => {
   }
 
   const targetId = parseInt(userId, 10).toString();
-  console.log(`[API] Switching tracking target to Roblox ID: ${targetId}`);
-  robloxUserId = targetId;
+  if (trackedUsers[targetId]) {
+    return res.status(400).json({ error: 'User is already being tracked.' });
+  }
 
-  // Reset local state for the new user
-  userProfile = {
-    id: robloxUserId,
-    username: 'Unknown',
-    displayName: 'Loading User...',
-    avatarUrl: 'https://images.rbxcdn.com/3d559e2b17a149b5dfd4f8f4117b3a72.png'
+  console.log(`[API] Adding tracking target Roblox ID: ${targetId}`);
+  
+  // Create placeholder in memory
+  trackedUsers[targetId] = {
+    profile: {
+      id: targetId,
+      username: 'Unknown',
+      displayName: 'Loading...',
+      avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+    },
+    presence: {
+      userPresenceType: null,
+      lastLocation: 'Unknown',
+      placeId: null,
+      rootPlaceId: null,
+      gameId: null,
+      universeId: null,
+      lastUpdated: null
+    }
   };
-
-  currentPresence = {
-    userPresenceType: null,
-    lastLocation: 'Unknown',
-    placeId: null,
-    rootPlaceId: null,
-    gameId: null,
-    universeId: null,
-    lastUpdated: null
-  };
-
-  // Clear logs array
-  logs.length = 0;
-  addLog('init', `Tracking target updated to Roblox ID ${robloxUserId}`, 'Initializing info...');
 
   try {
-    // Fetch details & presence for the new user
-    await fetchUserProfile();
+    // Fetch profile & presence
+    await fetchUserProfile(targetId);
+    
+    // Check if profile was loaded successfully (i.e. user actually exists in Roblox)
+    if (trackedUsers[targetId].profile.username === 'Unknown') {
+      delete trackedUsers[targetId];
+      return res.status(404).json({ error: 'Roblox user not found. Please verify the ID.' });
+    }
+
     await pollRobloxPresence();
-    res.json({ success: true, userProfile, currentPresence });
+
+    // Persist list of IDs to file
+    const currentIds = Object.keys(trackedUsers);
+    await saveTrackedUserIds(currentIds);
+
+    res.json({ success: true, user: trackedUsers[targetId] });
   } catch (err) {
+    delete trackedUsers[targetId];
     res.status(500).json({ error: `Failed to load info for new user: ${err.message}` });
   }
+});
+
+app.post('/api/untrack-user', async (req, res) => {
+  const { userId, password } = req.body;
+  
+  if (password !== WEBHOOK_TEST_PASSWORD) {
+    console.log('[API] Untrack user denied: invalid password');
+    return res.status(403).json({ error: 'Forbidden: Incorrect password' });
+  }
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Please supply a Roblox User ID to untrack.' });
+  }
+
+  const targetId = userId.toString();
+  if (!trackedUsers[targetId]) {
+    return res.status(404).json({ error: 'User is not currently being tracked.' });
+  }
+
+  console.log(`[API] Removing tracking target Roblox ID: ${targetId}`);
+  
+  const displayName = trackedUsers[targetId].profile.displayName;
+  delete trackedUsers[targetId];
+
+  // Persist list of IDs to file
+  const currentIds = Object.keys(trackedUsers);
+  await saveTrackedUserIds(currentIds);
+
+  addLog('config_change', `Stopped tracking ${displayName} (ID: ${targetId})`, 'Removed from tracker list');
+
+  res.json({ success: true, message: `Stopped tracking ${displayName}` });
 });
 
 app.post('/api/test-webhook', async (req, res) => {
@@ -453,20 +517,24 @@ app.post('/api/test-webhook', async (req, res) => {
     return res.status(400).json({ error: 'Webhook URL not set' });
   }
 
+  // Use first user in trackedUsers or a placeholder
+  const firstUserKey = Object.keys(trackedUsers)[0];
+  const exampleUser = firstUserKey ? trackedUsers[firstUserKey].profile : {
+    id: '162336333',
+    displayName: 'System Test',
+    username: 'SystemTest',
+    avatarUrl: 'https://images.rbxcdn.com/3d559e2b17a149b5dfd4f8f4117b3a72.png'
+  };
+
   const testEmbed = {
     title: '🚀 Nemo Tracker - Webhook Test',
     description: 'This is a test notification confirming that the status change webhook integration is active and working correctly!\n\n🌐 **[View Live Tracker](https://nemotracker.breymac.space)**',
-    url: `https://www.roblox.com/users/${robloxUserId}/profile`,
+    url: `https://www.roblox.com/users/${exampleUser.id}/profile`,
     color: 0x3498db, // In-game blue
     fields: [
       {
-        name: 'Target User',
-        value: `${userProfile.displayName} (@${userProfile.username})`,
-        inline: true
-      },
-      {
-        name: 'Configured Port',
-        value: `${PORT}`,
+        name: 'Example Tracked User',
+        value: `${exampleUser.displayName} (@${exampleUser.username})`,
         inline: true
       },
       {
@@ -476,7 +544,7 @@ app.post('/api/test-webhook', async (req, res) => {
       }
     ],
     thumbnail: {
-      url: userProfile.avatarUrl
+      url: exampleUser.avatarUrl
     },
     timestamp: new Date().toISOString(),
     footer: {
@@ -511,8 +579,32 @@ app.post('/api/test-webhook', async (req, res) => {
 
 // App Startup
 async function startApp() {
-  // 1. Fetch initial profile information
-  await fetchUserProfile();
+  // Load tracked IDs
+  const ids = await loadTrackedUserIds();
+  
+  // Initialize map structure
+  for (const id of ids) {
+    trackedUsers[id] = {
+      profile: {
+        id,
+        username: 'Unknown',
+        displayName: 'Loading...',
+        avatarUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+      },
+      presence: {
+        userPresenceType: null,
+        lastLocation: 'Unknown',
+        placeId: null,
+        rootPlaceId: null,
+        gameId: null,
+        universeId: null,
+        lastUpdated: null
+      }
+    };
+  }
+
+  // 1. Fetch initial profile information for all users in parallel
+  await Promise.all(ids.map(id => fetchUserProfile(id)));
   
   // 2. Perform initial presence poll
   await pollRobloxPresence();
@@ -526,7 +618,7 @@ async function startApp() {
     console.log(`Nemo Tracker is running!`);
     console.log(`Server Port: ${PORT}`);
     console.log(`Local Access: http://localhost:${PORT}`);
-    console.log(`Roblox Target ID: ${robloxUserId}`);
+    console.log(`Tracked Accounts count: ${Object.keys(trackedUsers).length}`);
     console.log(`Polling Frequency: Every ${POLL_INTERVAL_MS / 1000}s`);
     console.log(`========================================`);
   });
