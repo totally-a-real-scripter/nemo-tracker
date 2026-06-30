@@ -76,7 +76,7 @@ async function fetchUserProfile() {
     const profileRes = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
     if (profileRes.ok) {
       const text = await profileRes.text();
-      if (text.includes('t.me') || text.includes('A_ToolsX')) {
+      if (hasSpam(text)) {
         console.error('[Init] Blocked profile data containing spam links.');
         return;
       }
@@ -96,7 +96,7 @@ async function fetchUserProfile() {
     const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
     if (thumbRes.ok) {
       const text = await thumbRes.text();
-      if (text.includes('t.me') || text.includes('A_ToolsX')) {
+      if (hasSpam(text)) {
         console.error('[Init] Blocked thumbnail data containing spam links.');
         return;
       }
@@ -111,14 +111,24 @@ async function fetchUserProfile() {
   }
 }
 
+// Check if a string contains any spam signatures or links (case-insensitive)
+function hasSpam(text) {
+  if (!text) return false;
+  const str = text.toString().toLowerCase();
+  return str.includes('t.me') || 
+         str.includes('a_toolsx') || 
+         str.includes('a-tools') || 
+         str.includes('a_tools') || 
+         str.includes('telegram');
+}
+
 // Filter out any Telegram channel ads or forbidden links to prevent forwarding spam
 function sanitizeText(text) {
   if (!text) return '';
-  const str = text.toString();
-  if (/t\.me/i.test(str) || /A_ToolsX/i.test(str)) {
+  if (hasSpam(text)) {
     return '[Spam Link Filtered]';
   }
-  return str;
+  return text;
 }
 
 // Send Embed to Discord Webhook
@@ -167,7 +177,7 @@ async function sendDiscordWebhook(oldPresence, newPresence) {
   }
 
   const payload = JSON.stringify({ embeds: [embed] });
-  if (payload.includes('t.me') || payload.includes('A_ToolsX')) {
+  if (hasSpam(payload)) {
     console.error('[Discord] Outgoing webhook blocked: Payload contained forbidden spam links.');
     return;
   }
@@ -213,7 +223,7 @@ async function pollRobloxPresence() {
     }
 
     const text = await response.text();
-    if (text.includes('t.me') || text.includes('A_ToolsX')) {
+    if (hasSpam(text)) {
       console.error('[Tracker] Blocked presence response containing spam links.');
       addLog('error', 'Blocked Spam Response', 'Roblox API response contained Telegram ad links');
       return;
@@ -404,7 +414,7 @@ app.post('/api/test-webhook', async (req, res) => {
   };
 
   const payload = JSON.stringify({ embeds: [testEmbed] });
-  if (payload.includes('t.me') || payload.includes('A_ToolsX')) {
+  if (hasSpam(payload)) {
     return res.status(400).json({ error: 'Blocked: Payload contains forbidden spam links.' });
   }
 
